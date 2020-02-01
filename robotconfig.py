@@ -1,42 +1,32 @@
 {
-    # Class names of motor controllers used.
-    # Options:
-    # 'WPI_TalonSRX'
-    # 'WPI_TalonFX' (for Falcon 500 motors)
-    # 'WPI_VictorSPX'
-    # Note: The first motor on each side should always be a Talon SRX/FX, as the
-    # VictorSPX does not support encoder connections
-    "rightControllerTypes": ["WPI_TalonSRX", "WPI_TalonSRX", "WPI_TalonSRX"],
-    "leftControllerTypes": ["WPI_TalonSRX", "WPI_TalonSRX", "WPI_TalonSRX"],
+    # Warning: This project type is for BRUSHLESS motors ONLY!
     # Ports for the left-side motors
-    "leftMotorPorts": [33, 34, 32],
+    "leftMotorPorts": [32, 33],
     # Ports for the right-side motors
-    "rightMotorPorts": [22, 21, 23],
+    "rightMotorPorts": [23, 22],
+    # Note: Inversions of the slaves (i.e. any motor *after* the first on
+    # each side of the drive) are *with respect to their master*.  This is
+    # different from the other poject types!
     # Inversions for the left-side motors
-    "leftMotorsInverted": [False, False, False],
+    "leftMotorsInverted": [False, False],
     # Inversions for the right side motors
-    "rightMotorsInverted": [False, False, False],
+    "rightMotorsInverted": [False, False],
+    # The total gear reduction between the motor and the wheels, expressed as
+    # a fraction [motor turns]/[wheel turns]
+    "gearing": 8.0,
     # Wheel diameter (in units of your choice - will dictate units of analysis)
     "wheelDiameter": 6.0,
-    # If your robot has only one encoder, remove all of the right encoder fields
-    # Encoder pulses-per-revolution (*NOT* cycles per revolution!)
-    # This value should be the pulses per revolution *of the wheels*, and so
-    # should take into account gearing between the encoder and the wheels
-    "encoderPPR": 4025,
-    # Whether the left encoder is inverted
-    "leftEncoderInverted": True,
-    # Whether the right encoder is inverted:
-    "rightEncoderInverted": False,
     # Your gyro type (one of "NavX", "Pigeon", "ADXRS450", "AnalogGyro", or "None")
     "gyroType": "NavX",
     # Whatever you put into the constructor of your gyro
     # Could be:
     # "SPI.Port.kMXP" (MXP SPI port for NavX or ADXRS450),
-    # "I2C.Port.kOnboard" (Onboard I2C port for NavX)
+    # "SerialPort.Port.kMXP" (MXP Serial port for NavX),
+    # "I2C.Port.kOnboard" (Onboard I2C port for NavX),
     # "0" (Pigeon CAN ID or AnalogGyro channel),
     # "new WPI_TalonSRX(3)" (Pigeon on a Talon SRX),
-    # "leftSlave" (Pigeon on the left slave Talon SRX/FX),
     # "" (NavX using default SPI, ADXRS450 using onboard CS0, or no gyro)
     "gyroPort": "SPI.Port.kMXP",
 }
+
 

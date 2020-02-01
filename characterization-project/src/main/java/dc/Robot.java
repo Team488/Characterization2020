@@ -9,17 +9,20 @@ package dc;
 
 import java.util.function.Supplier;
 
-import com.ctre.phoenix.motorcontrol.FeedbackDevice;
-import com.ctre.phoenix.motorcontrol.NeutralMode;
+import com.revrobotics.CANEncoder;
+import com.revrobotics.CANSparkMax;
+import com.revrobotics.CANSparkMax.IdleMode;
+import com.revrobotics.CANSparkMaxLowLevel.MotorType;
+
+// WPI_Talon* imports are needed in case a user has a Pigeon on a Talon
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
-import com.ctre.phoenix.motorcontrol.can.WPI_VictorSPX;
-
 import com.ctre.phoenix.sensors.PigeonIMU;
 import com.kauailabs.navx.frc.AHRS;
 import edu.wpi.first.wpilibj.ADXRS450_Gyro;
 import edu.wpi.first.wpilibj.AnalogGyro;
 import edu.wpi.first.wpilibj.interfaces.Gyro;
+import edu.wpi.first.wpilibj.SerialPort;
 import edu.wpi.first.wpilibj.I2C;
 import edu.wpi.first.wpilibj.SPI;
 
@@ -36,14 +39,17 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 public class Robot extends TimedRobot {
 
   static private double WHEEL_DIAMETER = 6.0;
-  static private double ENCODER_PULSE_PER_REV = 4025;
+  static private double GEARING = 8.0;
   static private int PIDIDX = 0;
 
   Joystick stick;
   DifferentialDrive drive;
 
-  WPI_TalonSRX leftMaster;
-  WPI_TalonSRX rightMaster;
+  CANSparkMax leftMaster;
+  CANSparkMax rightMaster;
+
+  CANEncoder leftEncoder;
+  CANEncoder rightEncoder;
 
   Supplier<Double> leftEncoderPosition;
   Supplier<Double> leftEncoderRate;
@@ -67,33 +73,25 @@ public class Robot extends TimedRobot {
 
     stick = new Joystick(0);
 
-    leftMaster = new WPI_TalonSRX(33);
+    leftMaster = new CANSparkMax(32, MotorType.kBrushless);
     leftMaster.setInverted(false);
-    leftMaster.setSensorPhase(true);
-    leftMaster.setNeutralMode(NeutralMode.Brake);
+    leftMaster.setIdleMode(IdleMode.kBrake);
 
-    rightMaster = new WPI_TalonSRX(22);
+    leftEncoder = leftMaster.getEncoder();
+
+    rightMaster = new CANSparkMax(23, MotorType.kBrushless);
     rightMaster.setInverted(false);
-    rightMaster.setSensorPhase(false);
-    rightMaster.setNeutralMode(NeutralMode.Brake);
+    rightMaster.setIdleMode(IdleMode.kBrake);
 
-    WPI_TalonSRX leftSlave0 = new WPI_TalonSRX(34);
-    leftSlave0.setInverted(false);
+    rightEncoder = rightMaster.getEncoder();
+
+    CANSparkMax leftSlave0 = new CANSparkMax(33, MotorType.kBrushless);
     leftSlave0.follow(leftMaster);
-    leftSlave0.setNeutralMode(NeutralMode.Brake);
-    WPI_TalonSRX leftSlave1 = new WPI_TalonSRX(32);
-    leftSlave1.setInverted(false);
-    leftSlave1.follow(leftMaster);
-    leftSlave1.setNeutralMode(NeutralMode.Brake);
+    leftSlave0.setIdleMode(IdleMode.kBrake);
 
-    WPI_TalonSRX rightSlave0 = new WPI_TalonSRX(21);
-    rightSlave0.setInverted(false);
+    CANSparkMax rightSlave0 = new CANSparkMax(22, MotorType.kBrushless);
     rightSlave0.follow(rightMaster);
-    rightSlave0.setNeutralMode(NeutralMode.Brake);
-    WPI_TalonSRX rightSlave1 = new WPI_TalonSRX(23);
-    rightSlave1.setInverted(false);
-    rightSlave1.follow(rightMaster);
-    rightSlave1.setNeutralMode(NeutralMode.Brake);
+    rightSlave0.setIdleMode(IdleMode.kBrake);
 
     //
     // Configure gyro
@@ -118,27 +116,21 @@ public class Robot extends TimedRobot {
     //
 
     double encoderConstant =
-        (1 / ENCODER_PULSE_PER_REV) * WHEEL_DIAMETER * Math.PI;
+        (1 / GEARING) * WHEEL_DIAMETER * Math.PI;
 
-    leftMaster.configSelectedFeedbackSensor(FeedbackDevice.QuadEncoder,
-                                                PIDIDX, 10);
     leftEncoderPosition = ()
-        -> leftMaster.getSelectedSensorPosition(PIDIDX) * encoderConstant;
+        -> leftEncoder.getPosition() * encoderConstant;
     leftEncoderRate = ()
-        -> leftMaster.getSelectedSensorVelocity(PIDIDX) * encoderConstant *
-               10;
+        -> leftEncoder.getVelocity() * encoderConstant / 60.;
 
-    rightMaster.configSelectedFeedbackSensor(FeedbackDevice.QuadEncoder,
-                                                 PIDIDX, 10);
     rightEncoderPosition = ()
-        -> rightMaster.getSelectedSensorPosition(PIDIDX) * encoderConstant;
+        -> rightEncoder.getPosition() * encoderConstant;
     rightEncoderRate = ()
-        -> rightMaster.getSelectedSensorVelocity(PIDIDX) * encoderConstant *
-               10;
+        -> rightEncoder.getVelocity() * encoderConstant / 60.;
 
     // Reset encoders
-    leftMaster.setSelectedSensorPosition(0);
-    rightMaster.setSelectedSensorPosition(0);
+    leftEncoder.setPosition(0);
+    rightEncoder.setPosition(0);
 
     // Set the update rate instead of using flush because of a ntcore bug
     // -> probably don't want to do this on a robot in competition
@@ -200,8 +192,8 @@ public class Robot extends TimedRobot {
 
     double battery = RobotController.getBatteryVoltage();
 
-    double leftMotorVolts = leftMaster.getMotorOutputVoltage();
-    double rightMotorVolts = rightMaster.getMotorOutputVoltage();
+    double leftMotorVolts = leftMaster.getBusVoltage() * leftMaster.getAppliedOutput();
+    double rightMotorVolts = rightMaster.getBusVoltage() * rightMaster.getAppliedOutput();
 
     // Retrieve the commanded speed from NetworkTables
     double autospeed = autoSpeedEntry.getDouble(0);
